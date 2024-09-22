@@ -391,6 +391,272 @@ class ActionsFastmodulecheck extends CommonHookActions
 		$modules = [];
 		$orders = [];
 
+		if (in_array('toprightmenu', $contexts)) {
+			// if we set another view list mode, we keep it (till we change one more time)
+			if (GETPOSTISSET('mode')) {
+				$mode = GETPOST('mode', 'alpha');
+				if ($mode =='common' || $mode =='commonkanban') {
+					dolibarr_set_const($db, "MAIN_MODULE_SETUP_ON_LIST_BY_DEFAULT", $mode, 'chaine', 0, '', $conf->entity);
+				}
+			} else {
+				$mode = (!getDolGlobalString('MAIN_MODULE_SETUP_ON_LIST_BY_DEFAULT') ? 'commonkanban' : $conf->global->MAIN_MODULE_SETUP_ON_LIST_BY_DEFAULT);
+			}
+
+			$disabled_modules = array();
+			if (!empty($_SESSION["disablemodules"])) {
+				$disabled_modules = explode(',', $_SESSION["disablemodules"]);
+			}
+
+			foreach ($modulesdir as $dir) {
+				// Load modules attributes in arrays (name, numero, orders) from dir directory
+				//print $dir."\n<br>";
+				dol_syslog("Scan directory ".$dir." for module descriptor files (modXXX.class.php)");
+				$handle = @opendir($dir);
+				if (is_resource($handle)) {
+					while (($file = readdir($handle)) !== false) {
+						//print "$i ".$file."\n<br>";
+						if (is_readable($dir.$file) && substr($file, 0, 3) == 'mod' && substr($file, dol_strlen($file) - 10) == '.class.php') {
+							$modName = substr($file, 0, dol_strlen($file) - 10);
+							// var_dump($modName);
+			
+							if ($modName) {
+								if (!empty($modNameLoaded[$modName])) {   // In cache of already loaded modules ?
+									$mesg = "Error: Module ".$modName." was found twice: Into ".$modNameLoaded[$modName]." and ".$dir.". You probably have an old file on your disk.<br>";
+									setEventMessages($mesg, null, 'warnings');
+									dol_syslog($mesg, LOG_ERR);
+									continue;
+								}
+			
+								try {
+									// Création d'une instance class
+									$res = include_once $dir.$file; // A class already exists in a different file will send a non catchable fatal error.
+									if (class_exists($modName)) {
+										$objMod = new $modName($db);
+										$modNameLoaded[$modName] = $dir;
+										if (!$objMod->numero > 0 && $modName != 'modUser') {
+											dol_syslog('The module descriptor '.$modName.' must have a numero property', LOG_ERR);
+										}
+										$j = $objMod->numero;
+										
+										$modulequalified = 1;
+										
+										// We discard modules according to features level (PS: if module is activated we always show it)
+										$const_name = 'MAIN_MODULE_'.strtoupper(preg_replace('/^mod/i', '', get_class($objMod)));
+										if ($objMod->version == 'development' && (!getDolGlobalString($const_name) && (getDolGlobalInt('MAIN_FEATURES_LEVEL') < 2))) {
+											$modulequalified = 0;
+										}
+										if ($objMod->version == 'experimental' && (!getDolGlobalString($const_name) && (getDolGlobalInt('MAIN_FEATURES_LEVEL') < 1))) {
+											$modulequalified = 0;
+										}
+										if (preg_match('/deprecated/', $objMod->version) && (!getDolGlobalString($const_name) && (getDolGlobalInt('MAIN_FEATURES_LEVEL') >= 0))) {
+											$modulequalified = 0;
+										}
+										
+										// We discard modules according to property ->hidden
+										if (!empty($objMod->hidden)) {
+											$modulequalified = 0;
+										}
+										
+										if ($modulequalified > 0) {
+											$publisher = dol_escape_htmltag($objMod->getPublisher());
+											$external = ($objMod->isCoreOrExternalModule() == 'external');
+											if ($external) {
+												if ($publisher) {
+													$arrayofnatures['external_'.$publisher] = $langs->trans("External").' - '.$publisher;
+												} else {
+													$arrayofnatures['external_'] = $langs->trans("External").' - '.$langs->trans("UnknownPublishers");
+												}
+												ksort($arrayofnatures);
+											}
+											
+											// Define array $categ with categ with at least one qualified module
+											$filename[$i] = $modName;
+											$modules[$modName] = $objMod;
+											if ($filename[$i] === 'modFastmodulecheck') {
+												
+											}
+											// Gives the possibility to the module, to provide his own family info and position of this family
+											// var_dump($familyinfo['products']['position']);
+											if (is_array($objMod->familyinfo) && !empty($objMod->familyinfo)) {
+												$familyinfo = array_merge($familyinfo, $objMod->familyinfo);
+												$familykey = key($objMod->familyinfo);
+											} else {
+												$familykey = $objMod->family;
+											}
+			
+											$moduleposition = ($objMod->module_position ? $objMod->module_position : '50');
+											if ($objMod->isCoreOrExternalModule() == 'external' && $moduleposition < 100000) {
+												// an external module should never return a value lower than '80'.
+												$moduleposition = '80'; // External modules at end by default
+											}
+			
+											// Add list of warnings to show into arrayofwarnings and arrayofwarningsext
+											if (!empty($objMod->warnings_activation)) {
+												$arrayofwarnings[$modName] = $objMod->warnings_activation;
+											}
+											if (!empty($objMod->warnings_activation_ext)) {
+												$arrayofwarningsext[$modName] = $objMod->warnings_activation_ext;
+											}
+			
+											$familyposition = (empty($familyinfo[$familykey]['position']) ? 0 : $familyinfo[$familykey]['position']);
+											// var_dump($familyposition);
+											$listOfOfficialModuleGroups = array('hr', 'technic', 'interface', 'technic', 'portal', 'financial', 'crm', 'base', 'products', 'srm', 'ecm', 'projects', 'other');
+											if ($external && !in_array($familykey, $listOfOfficialModuleGroups)) {
+												// If module is extern and into a custom group (not into an official predefined one), it must appear at end (custom groups should not be before official groups).
+												if (is_numeric($familyposition)) {
+													$familyposition = sprintf("%03d", (int) $familyposition + 100);
+												}
+											}
+			
+											$orders[$i] = $familyposition."_".$familykey."_".$moduleposition."_".$j; // Sort by family, then by module position then number
+			
+											// Set categ[$i]
+											$specialstring = 'unknown';
+											if ($objMod->version == 'development' || $objMod->version == 'experimental') {
+												$specialstring = 'expdev';
+											}
+											if (isset($categ[$specialstring])) {
+												$categ[$specialstring]++; // Array of all different modules categories
+											} else {
+												$categ[$specialstring] = 1;
+											}
+											$j++;
+											$i++;
+										} else {
+											dol_syslog("Module ".get_class($objMod)." not qualified");
+										}
+									} else {
+										print "admin/modules.php Warning bad descriptor file : ".$dir.$file." (Class ".$modName." not found into file)<br>";
+									}
+								} catch (Exception $e) {
+									dol_syslog("Failed to load ".$dir.$file." ".$e->getMessage(), LOG_ERR);
+								}
+							}
+						}
+					}
+					closedir($handle);
+				} else {
+					dol_syslog("htdocs/admin/modules.php: Failed to open directory ".$dir.". See permission and open_basedir option.", LOG_WARNING);
+				}
+			}
+
+			asort($orders);
+			
+			$menu = '
+			<button id="toggleButton" onclick="toggleTable()"></button>
+			<table id="hiddenTable_fastmodulecheck" style="display:none; border: 1px solid black;">
+				<tr class="table_fast_title">
+					<th>Module</th>
+					<th>Active</th>
+				</tr>';
+			if ($mode == 'common' || $mode == 'commonkanban') {
+				foreach ($orders as $key => $value) {
+					$linenum++;
+					$tab = explode('_', $value);
+					$familykey = $tab[1];
+					$module_position = $tab[2];
+	
+					$modName = $filename[$key];
+	
+					/** @var DolibarrModules $objMod */
+					$objMod = $modules[$modName];
+	
+					$modulename = $objMod->getName();
+					$moduletechnicalname = $objMod->name;
+					$moduledesc = $objMod->getDesc();
+					$moduledesclong = $objMod->getDescLong();
+					$moduleauthor = $objMod->getPublisher();
+	
+					if (empty($objMod->always_enabled) && getDolGlobalString($const_name)) {
+						$codeenabledisable .= '<a class="reposition" href="'.$_SERVER["PHP_SELF"].'?id='.$objMod->numero.'&token='.newToken().'&module_position='.$module_position.'&action=set&token='.newToken().'&value='.$modName.'&mode='.$mode.$param.'"';
+						$codeenabledisable .= '>';
+						$codeenabledisable .= img_picto($langs->trans("Activated"), 'switch_on');
+						$codeenabledisable .= "</a>\n";
+					} else {
+						$codeenabledisable .= '<a class="reposition" href="'.$_SERVER["PHP_SELF"].'?id='.$objMod->numero.'&token='.newToken().'&module_position='.$module_position.'&action=set&token='.newToken().'&value='.$modName.'&mode='.$mode.$param.'"';
+						$codeenabledisable .= img_picto($langs->trans("Activated"), 'switch_on');
+						$codeenabledisable .= "</a>";
+						var_dump($codeenabledisable);
+					}
+	
+					// $iconValue = ($moduleValue == 1) ? 'no' : 'yes';
+					$menu .= '<tr class="table_fast_value">';
+					
+					// Affiche le nom du module
+					$menu .= '<td>' . htmlspecialchars($moduletechnicalname) . '</td>';
+					
+					// Affiche le statut du module (activé/désactivé)
+					// $statusText = ($moduleValue == 1) ? 'Enabled' : 'Disabled';
+					// $menu .= '<td>' . htmlspecialchars($statusText) . '</td>';
+					
+					// Crée le bouton pour activer/désactiver
+					$menu .= '<td>';
+					// $menu .= '<a class="reposition" href="' . $_SERVER["PHP_SELF"] . '?value=' . urlencode($moduleName) . '&token=' . newToken() . '&action=activedModule&confirm='.$iconValue.'">';
+					$menu .= print $codeenabledisable;
+					// $icon = ($objMod->disabled == true) ? 'switch_on' : 'switch_off';
+					// $menu .= img_picto($langs->trans($statusText), $icon);
+					// $menu .= '</a>';
+					$menu .= '</td>';
+					
+					$menu .= '</tr>';
+				}
+			}
+
+			
+
+			// foreach ($modulTitle as $moduleName => $moduleValue) {
+			// 	$iconValue = ($moduleValue == 1) ? 'no' : 'yes';
+			// 	$menu .= '<tr class="table_fast_value">';
+				
+			// 	// Affiche le nom du module
+			// 	$menu .= '<td>' . htmlspecialchars($moduleName) . '</td>';
+				
+			// 	// Affiche le statut du module (activé/désactivé)
+			// 	$statusText = ($moduleValue == 1) ? 'Enabled' : 'Disabled';
+			// 	// $menu .= '<td>' . htmlspecialchars($statusText) . '</td>';
+				
+			// 	// Crée le bouton pour activer/désactiver
+			// 	$menu .= '<td>';
+			// 	$menu .= '<a class="reposition" href="' . $_SERVER["PHP_SELF"] . '?value=' . urlencode($moduleName) . '&token=' . newToken() . '&action=activedModule&confirm='.$iconValue.'">';
+			// 	$icon = ($moduleValue == 1) ? 'switch_on' : 'switch_off';
+			// 	$menu .= img_picto($langs->trans($statusText), $icon);
+			// 	$menu .= '</a>';
+			// 	$menu .= '</td>';
+				
+			// 	$menu .= '</tr>';
+			// }
+
+			$menu .= '</table>';
+
+
+
+			$this->resprints .= $menu . '
+			<script>
+				function toggleTable() {
+					var table = document.getElementById("hiddenTable_fastmodulecheck");
+					var button = document.getElementById("toggleButton");
+
+					if (table.style.display === "none") {
+						table.style.display = "flex";
+					} else {
+						table.style.display = "none";
+					}
+				}
+
+				// Handle clicks outside the table and button
+				document.addEventListener("click", function(e) {
+					var table = document.getElementById("hiddenTable_fastmodulecheck");
+					var button = document.getElementById("toggleButton");
+
+					// Check if click is outside the table and button
+					if (!table.contains(e.target) && e.target !== button) {
+						if (table.style.display === "flex") {
+							table.style.display = "none";
+						}
+					}
+				});
+			</script>';
+		}
 		// Check filters
 		// var_dump($objMod->getName());
 
@@ -532,285 +798,6 @@ class ActionsFastmodulecheck extends CommonHookActions
 		// 		});
 		// 	</script>';
 		// }
-		if (in_array('toprightmenu', $contexts)) {
-			
-			$disabled_modules = array();
-			if (!empty($_SESSION["disablemodules"])) {
-				$disabled_modules = explode(',', $_SESSION["disablemodules"]);
-			}
-
-			foreach ($modulesdir as $dir) {
-				// Load modules attributes in arrays (name, numero, orders) from dir directory
-				//print $dir."\n<br>";
-				dol_syslog("Scan directory ".$dir." for module descriptor files (modXXX.class.php)");
-				$handle = @opendir($dir);
-				if (is_resource($handle)) {
-					while (($file = readdir($handle)) !== false) {
-						//print "$i ".$file."\n<br>";
-						if (is_readable($dir.$file) && substr($file, 0, 3) == 'mod' && substr($file, dol_strlen($file) - 10) == '.class.php') {
-							$modName = substr($file, 0, dol_strlen($file) - 10);
-							// var_dump($modName);
-			
-							if ($modName) {
-								if (!empty($modNameLoaded[$modName])) {   // In cache of already loaded modules ?
-									$mesg = "Error: Module ".$modName." was found twice: Into ".$modNameLoaded[$modName]." and ".$dir.". You probably have an old file on your disk.<br>";
-									setEventMessages($mesg, null, 'warnings');
-									dol_syslog($mesg, LOG_ERR);
-									continue;
-								}
-			
-								try {
-									// Création d'une instance class
-									$res = include_once $dir.$file; // A class already exists in a different file will send a non catchable fatal error.
-									if (class_exists($modName)) {
-										$objMod = new $modName($db);
-										$modNameLoaded[$modName] = $dir;
-										if (!$objMod->numero > 0 && $modName != 'modUser') {
-											dol_syslog('The module descriptor '.$modName.' must have a numero property', LOG_ERR);
-										}
-										$j = $objMod->numero;
-										
-										$modulequalified = 1;
-										
-										// We discard modules according to features level (PS: if module is activated we always show it)
-										$const_name = 'MAIN_MODULE_'.strtoupper(preg_replace('/^mod/i', '', get_class($objMod)));
-										if ($objMod->version == 'development' && (!getDolGlobalString($const_name) && (getDolGlobalInt('MAIN_FEATURES_LEVEL') < 2))) {
-											$modulequalified = 0;
-										}
-										if ($objMod->version == 'experimental' && (!getDolGlobalString($const_name) && (getDolGlobalInt('MAIN_FEATURES_LEVEL') < 1))) {
-											$modulequalified = 0;
-										}
-										if (preg_match('/deprecated/', $objMod->version) && (!getDolGlobalString($const_name) && (getDolGlobalInt('MAIN_FEATURES_LEVEL') >= 0))) {
-											$modulequalified = 0;
-										}
-										
-										// We discard modules according to property ->hidden
-										if (!empty($objMod->hidden)) {
-											$modulequalified = 0;
-										}
-										
-										if ($modulequalified > 0) {
-											$publisher = dol_escape_htmltag($objMod->getPublisher());
-											$external = ($objMod->isCoreOrExternalModule() == 'external');
-											if ($external) {
-												if ($publisher) {
-													$arrayofnatures['external_'.$publisher] = $langs->trans("External").' - '.$publisher;
-												} else {
-													$arrayofnatures['external_'] = $langs->trans("External").' - '.$langs->trans("UnknownPublishers");
-												}
-												ksort($arrayofnatures);
-											}
-											
-											// Define array $categ with categ with at least one qualified module
-											$filename[$i] = $modName;
-											$modules[$modName] = $objMod;
-											var_dump($filename[$i]);
-											if ($filename[$i] === 'modFastmodulecheck') {
-												
-											}
-											// Gives the possibility to the module, to provide his own family info and position of this family
-											// var_dump($familyinfo['products']['position']);
-											if (is_array($objMod->familyinfo) && !empty($objMod->familyinfo)) {
-												$familyinfo = array_merge($familyinfo, $objMod->familyinfo);
-												$familykey = key($objMod->familyinfo);
-											} else {
-												$familykey = $objMod->family;
-											}
-			
-											$moduleposition = ($objMod->module_position ? $objMod->module_position : '50');
-											if ($objMod->isCoreOrExternalModule() == 'external' && $moduleposition < 100000) {
-												// an external module should never return a value lower than '80'.
-												$moduleposition = '80'; // External modules at end by default
-											}
-			
-											// Add list of warnings to show into arrayofwarnings and arrayofwarningsext
-											if (!empty($objMod->warnings_activation)) {
-												$arrayofwarnings[$modName] = $objMod->warnings_activation;
-											}
-											if (!empty($objMod->warnings_activation_ext)) {
-												$arrayofwarningsext[$modName] = $objMod->warnings_activation_ext;
-											}
-			
-											$familyposition = (empty($familyinfo[$familykey]['position']) ? 0 : $familyinfo[$familykey]['position']);
-											// var_dump($familyposition);
-											$listOfOfficialModuleGroups = array('hr', 'technic', 'interface', 'technic', 'portal', 'financial', 'crm', 'base', 'products', 'srm', 'ecm', 'projects', 'other');
-											if ($external && !in_array($familykey, $listOfOfficialModuleGroups)) {
-												// If module is extern and into a custom group (not into an official predefined one), it must appear at end (custom groups should not be before official groups).
-												if (is_numeric($familyposition)) {
-													$familyposition = sprintf("%03d", (int) $familyposition + 100);
-												}
-											}
-			
-											$orders[$i] = $familyposition."_".$familykey."_".$moduleposition."_".$j; // Sort by family, then by module position then number
-			
-											// Set categ[$i]
-											$specialstring = 'unknown';
-											if ($objMod->version == 'development' || $objMod->version == 'experimental') {
-												$specialstring = 'expdev';
-											}
-											if (isset($categ[$specialstring])) {
-												$categ[$specialstring]++; // Array of all different modules categories
-											} else {
-												$categ[$specialstring] = 1;
-											}
-											$j++;
-											$i++;
-										} else {
-											dol_syslog("Module ".get_class($objMod)." not qualified");
-										}
-									} else {
-										print "admin/modules.php Warning bad descriptor file : ".$dir.$file." (Class ".$modName." not found into file)<br>";
-									}
-								} catch (Exception $e) {
-									dol_syslog("Failed to load ".$dir.$file." ".$e->getMessage(), LOG_ERR);
-								}
-							}
-						}
-					}
-					closedir($handle);
-				} else {
-					dol_syslog("htdocs/admin/modules.php: Failed to open directory ".$dir.". See permission and open_basedir option.", LOG_WARNING);
-				}
-			}
-
-			$menu = '
-			<button id="toggleButton" onclick="toggleTable()"></button>
-			<table id="hiddenTable_fastmodulecheck" style="display:none; border: 1px solid black;">
-				<tr class="table_fast_title">
-					<th>Module</th>
-					<th>Active</th>
-				</tr>';
-
-			foreach ($orders as $key => $value) {
-
-				$linenum++;
-				$tab = explode('_', $value);
-				$familykey = $tab[1];
-				$module_position = $tab[2];
-
-				$modName = $filename[$key];
-
-				/** @var DolibarrModules $objMod */
-				$objMod = $modules[$modName];
-
-				$modulename = $objMod->getName();
-				$moduletechnicalname = $objMod->name;
-				$moduledesc = $objMod->getDesc();
-				$moduledesclong = $objMod->getDescLong();
-				$moduleauthor = $objMod->getPublisher();
-
-				if (!empty($objMod->disabled)) {
-					$codeenabledisable .= $langs->trans("Disabled");
-				} elseif (!empty($objMod->always_enabled) || ((isModEnabled('multicompany') && $objMod->core_enabled) && ($user->entity || $conf->entity != 1))) {
-					if (method_exists($objMod, 'alreadyUsed') && $objMod->alreadyUsed()) {
-						$codeenabledisable .= $langs->trans("Used");
-					} else {
-						$codeenabledisable .= img_picto($langs->trans("Required"), 'switch_on', '', false, 0, 0, '', 'opacitymedium valignmiddle');
-						//print $langs->trans("Required");
-					}
-					if (isModEnabled('multicompany') && $user->entity) {
-						$disableSetup++;
-					}
-				} else {
-					if (!empty($objMod->warnings_unactivation[$mysoc->country_code]) && method_exists($objMod, 'alreadyUsed') && $objMod->alreadyUsed()) {
-						$codeenabledisable .= '<a class="reposition valignmiddle" href="'.$_SERVER["PHP_SELF"].'?id='.$objMod->numero.'&amp;token='.newToken().'&amp;module_position='.$module_position.'&amp;action=reset_confirm&amp;confirm_message_code='.urlencode($objMod->warnings_unactivation[$mysoc->country_code]).'&amp;value='.$modName.'&amp;mode='.$mode.$param.'">';
-						$codeenabledisable .= img_picto($langs->trans("Activated").($warningstring ? ' '.$warningstring : ''), 'switch_on');
-						$codeenabledisable .= '</a>';
-						if (getDolGlobalInt("MAIN_FEATURES_LEVEL") > 1) {
-							$codeenabledisable .= '&nbsp;';
-							$codeenabledisable .= '<a class="reposition" href="'.$_SERVER["PHP_SELF"].'?id='.$objMod->numero.'&amp;token='.newToken().'&amp;module_position='.$module_position.'&amp;action=reload_confirm&amp;value='.$modName.'&amp;mode='.$mode.'&amp;confirm=yes'.$param.'">';
-							$codeenabledisable .= img_picto($langs->trans("Reload"), 'refresh', 'class="opacitymedium"');
-							$codeenabledisable .= '</a>';
-						}
-					} else {
-						$codeenabledisable .= '<a class="reposition valignmiddle" href="'.$_SERVER["PHP_SELF"].'?id='.$objMod->numero.'&amp;token='.newToken().'&amp;module_position='.$module_position.'&amp;action=reset&amp;value='.$modName.'&amp;mode='.$mode.'&amp;confirm=yes'.$param.'">';
-						$codeenabledisable .= img_picto($langs->trans("Activated").($warningstring ? ' '.$warningstring : ''), 'switch_on');
-						$codeenabledisable .= '</a>';
-						if (getDolGlobalInt("MAIN_FEATURES_LEVEL") > 1) {
-							$codeenabledisable .= '&nbsp;';
-							$codeenabledisable .= '<a class="reposition" href="'.$_SERVER["PHP_SELF"].'?id='.$objMod->numero.'&amp;token='.newToken().'&amp;module_position='.$module_position.'&amp;action=reload&amp;value='.$modName.'&amp;mode='.$mode.'&amp;confirm=yes'.$param.'">';
-							$codeenabledisable .= img_picto($langs->trans("Reload"), 'refresh', 'class="opacitymedium"');
-							$codeenabledisable .= '</a>';
-						}
-					}
-				}
-				
-				$iconValue = ($moduleValue == 1) ? 'no' : 'yes';
-				$menu .= '<tr class="table_fast_value">';
-				
-				// Affiche le nom du module
-				$menu .= '<td>' . htmlspecialchars($moduletechnicalname) . '</td>';
-				
-				// Affiche le statut du module (activé/désactivé)
-				$statusText = ($moduleValue == 1) ? 'Enabled' : 'Disabled';
-				// $menu .= '<td>' . htmlspecialchars($statusText) . '</td>';
-				
-				// Crée le bouton pour activer/désactiver
-				$menu .= '<td>';
-				$menu .= '<a class="reposition" href="' . $_SERVER["PHP_SELF"] . '?value=' . urlencode($moduleName) . '&token=' . newToken() . '&action=activedModule&confirm='.$iconValue.'">';
-				$icon = ($moduleValue == 1) ? 'switch_on' : 'switch_off';
-				$menu .= img_picto($langs->trans($statusText), $icon);
-				$menu .= '</a>';
-				$menu .= '</td>';
-				
-				$menu .= '</tr>';
-			}
-
-			
-
-			// foreach ($modulTitle as $moduleName => $moduleValue) {
-			// 	$iconValue = ($moduleValue == 1) ? 'no' : 'yes';
-			// 	$menu .= '<tr class="table_fast_value">';
-				
-			// 	// Affiche le nom du module
-			// 	$menu .= '<td>' . htmlspecialchars($moduleName) . '</td>';
-				
-			// 	// Affiche le statut du module (activé/désactivé)
-			// 	$statusText = ($moduleValue == 1) ? 'Enabled' : 'Disabled';
-			// 	// $menu .= '<td>' . htmlspecialchars($statusText) . '</td>';
-				
-			// 	// Crée le bouton pour activer/désactiver
-			// 	$menu .= '<td>';
-			// 	$menu .= '<a class="reposition" href="' . $_SERVER["PHP_SELF"] . '?value=' . urlencode($moduleName) . '&token=' . newToken() . '&action=activedModule&confirm='.$iconValue.'">';
-			// 	$icon = ($moduleValue == 1) ? 'switch_on' : 'switch_off';
-			// 	$menu .= img_picto($langs->trans($statusText), $icon);
-			// 	$menu .= '</a>';
-			// 	$menu .= '</td>';
-				
-			// 	$menu .= '</tr>';
-			// }
-
-			$menu .= '</table>';
-
-
-
-			$this->resprints .= $menu . '
-			<script>
-				function toggleTable() {
-					var table = document.getElementById("hiddenTable_fastmodulecheck");
-					var button = document.getElementById("toggleButton");
-
-					if (table.style.display === "none") {
-						table.style.display = "flex";
-					} else {
-						table.style.display = "none";
-					}
-				}
-
-				// Handle clicks outside the table and button
-				document.addEventListener("click", function(e) {
-					var table = document.getElementById("hiddenTable_fastmodulecheck");
-					var button = document.getElementById("toggleButton");
-
-					// Check if click is outside the table and button
-					if (!table.contains(e.target) && e.target !== button) {
-						if (table.style.display === "flex") {
-							table.style.display = "none";
-						}
-					}
-				});
-			</script>';
-		}
 	}
 
 	/* Add here any other hooked methods... */
