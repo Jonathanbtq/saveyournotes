@@ -118,6 +118,8 @@ class modQtycheck extends DolibarrModules
 				  'data' => array(
 				      'ordercard',
 				      'main',
+					  'propalcard',
+					  'invoicecard'
 				  ),
 				  'entity' => '0',
 			),

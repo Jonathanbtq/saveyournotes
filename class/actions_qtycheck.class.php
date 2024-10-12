@@ -111,46 +111,21 @@ class ActionsQtycheck extends CommonHookActions
 			// You can for example call global vars like $fieldstosearchall to overwrite them, or update database depending on $action and $_POST values.
 		}
 
-		if (!$error) {
-			$this->results = array('myreturn' => 999);
-			$this->resprints = 'A text to show';
-			return 0; // or return 1 to replace standard code
-		} else {
-			$this->errors[] = 'Error message';
-			return -1;
-		}
+		$contexts = explode(':', $parameters['context'] ?? '');
 
-		if (in_array('ordercard', $contexts) && $action === 'addline') {
-			/**
-			 * @var CommandeLigne $object
-			 */
+		if (array_intersect(['ordercard', 'propalcard', 'invoicecard'], $contexts) && $action === 'addline') {
 			$qty = GETPOST('qty');
 			$resultat = 0;
 
 			if (!empty($qty)) {
 				$qty = str_replace(' ', '', $qty);
-
 				if (!preg_match('/^[0-9+\-*\/().]+$/', $qty)) {
 					setEventMessage('Expression invalide, seuls les nombres et opérateurs mathématiques sont autorisés', 'errors');
 				} else {
 					if (preg_match('/[+\-*\/]/', $qty)) {
-						try {
-							$qty = strval($qty);
-							eval("\$resultat = $qty;");
-							$object->qty = $resultat;
-							$object->update($user, true);
-		
-							$sql = 'INSERT INTO '.MAIN_DB_PREFIX.'qtycheck (datec, expression, fk_product, fk_object, type_object, import_key, tms)';
-							$sql .= ' VALUES(\'' . date('Y-m-d') . '\',' . $qty . ',' . $object->id. ',' . GETPOST('id') . ','.$object->element.' , NULL);';
-		
-							if ($this->db->query($sql)) {
-								setEventMessage('Expression réussie', 'mesgs');
-							} else {
-								setEventMessage('Une erreur est survenue lors de la sauvegarde de l\'expression', 'errors');
-							}
-						} catch (Throwable $e) {
-							setEventMessage('Une erreur dans l\'évaluation de l\'expression est survenue', 'errors');
-						}
+						$qty = strval($qty);
+						eval("\$resultat = $qty;");
+						$_POST['qtynew'] = $_POST['qty'] = $qty;
 					}
 				}
 			}
