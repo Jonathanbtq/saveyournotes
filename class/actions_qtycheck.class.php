@@ -113,8 +113,10 @@ class ActionsQtycheck extends CommonHookActions
 
 		$contexts = explode(':', $parameters['context'] ?? '');
 
+		// Envoyer la quantités avant la sauvegarde en bdd (calcul total HT)
 		if (array_intersect(['ordercard', 'propalcard', 'invoicecard'], $contexts) && $action === 'addline') {
 			$qty = GETPOST('qty');
+			$_POST['qtynew'] = $qty;
 			$resultat = 0;
 
 			if (!empty($qty)) {
@@ -125,7 +127,7 @@ class ActionsQtycheck extends CommonHookActions
 					if (preg_match('/[+\-*\/]/', $qty)) {
 						$qty = strval($qty);
 						eval("\$resultat = $qty;");
-						$_POST['qtynew'] = $_POST['qty'] = $qty;
+						$_POST['qty'] = $resultat;
 					}
 				}
 			}
@@ -139,7 +141,10 @@ class ActionsQtycheck extends CommonHookActions
 		
 		// Convertir les résultats en JSON
 		if (!empty($result)) {
-			$jsonData = json_encode($result);
+			while($row = $this->db->fetch_object($result)) {
+				$qtycheck[] = $row;
+			}
+			$jsonData = json_encode($qtycheck);
 			?>
 			<script>
 				const qtydiv = document.querySelectorAll('.linecolqty');
