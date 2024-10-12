@@ -136,7 +136,7 @@ class ActionsQtycheck extends CommonHookActions
 
 	public function formAddObjectLine($parameters, &$object, &$action, $hookmanager)
 	{
-		$sql = "SELECT rowid, expression FROM ".MAIN_DB_PREFIX."qtycheck";
+		$sql = "SELECT expression, fk_ligne FROM ".MAIN_DB_PREFIX."qtycheck WHERE fk_object =".$object->id;
 		$result = $this->db->query($sql);
 		
 		// Convertir les résultats en JSON
@@ -149,11 +149,17 @@ class ActionsQtycheck extends CommonHookActions
 			<script>
 				const qtydiv = document.querySelectorAll('.linecolqty');
 				const qtyData = <?php echo $jsonData; ?>;
-
+				
 				qtydiv.forEach((div, index) => {
-					if (qtyData[index]) {
-						div.textContent = qtyData[index].expression;
-					}
+					const prtDiv = div.parentNode;
+					var dataId = prtDiv.getAttribute('data-id');
+
+					qtyData.forEach((data) => {
+						if (data['fk_ligne'] === dataId) {
+							div.textContent = data['expression'];
+							txt = data['expression'];
+						}
+					})
 				})
 			</script>
 			<?php

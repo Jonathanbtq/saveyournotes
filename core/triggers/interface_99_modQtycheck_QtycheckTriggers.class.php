@@ -342,11 +342,14 @@ class InterfaceQtycheckTriggers extends DolibarrTriggers
 						$objectid = GETPOST('id');
 						$lineid = GETPOST('idprod');
 
-						// var_dump(GETPOST('qtynew'));
-						// exit;
-						$sql = 'INSERT INTO '.MAIN_DB_PREFIX.'qtycheck (datec, expression, fk_product, fk_object, type_object, import_key, tms)';
-						$sql .= ' VALUES(\'' . date('d-m-Y') . '\', \'' . GETPOST('qtynew') . '\', ' . $lineid. ',' .$objectid . ',\''.$object->element.'\' , null,'. date('d-m-Y').');';
-						
+						/**
+						 * $lineid -> Id product
+						 * $objectid -> Id commande/facture
+						 * $object->id -> Id ligne
+						 */
+						$sql = 'INSERT INTO '.MAIN_DB_PREFIX.'qtycheck (datec, expression, fk_product, fk_object, fk_ligne, type_object, import_key, tms)';
+						$sql .= ' VALUES(\'' . date('d-m-Y') . '\', \'' . GETPOST('qtynew') . '\', ' . $lineid. ',' .$objectid . ', ' . $object->id . ' ,\''.$object->element.'\' , null,'. date('d-m-Y').');';
+
 						if ($this->db->query($sql)) {
 							setEventMessage('Expression réussie', 'mesgs');
 						} else {
