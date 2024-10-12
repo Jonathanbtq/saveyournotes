@@ -115,11 +115,11 @@ class modQtycheck extends DolibarrModules
 			),
 			// Set here all hooks context managed by module. To find available hook context, make a "grep -r '>initHooks(' *" on source code. You can also set hook context to 'all'
 			'hooks' => array(
-				//   'data' => array(
-				//       'hookcontext1',
-				//       'hookcontext2',
-				//   ),
-				//   'entity' => '0',
+				  'data' => array(
+				      'ordercard',
+				      'main',
+				  ),
+				  'entity' => '0',
 			),
 			// Set this to 1 if features of module are opened to external users
 			'moduleforexternal' => 0,
@@ -146,8 +146,8 @@ class modQtycheck extends DolibarrModules
 		$this->langfiles = array("qtycheck@qtycheck");
 
 		// Prerequisites
-		$this->phpmin = array(7, 0); // Minimum version of PHP required by module
-		$this->need_dolibarr_version = array(11, -3); // Minimum version of Dolibarr required by module
+		$this->phpmin = array(7, 4); // Minimum version of PHP required by module
+		$this->need_dolibarr_version = array(15, 0); // Minimum version of Dolibarr required by module
 		$this->need_javascript_ajax = 0;
 
 		// Messages at activation

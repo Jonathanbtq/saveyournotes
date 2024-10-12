@@ -119,8 +119,66 @@ class ActionsQtycheck extends CommonHookActions
 			$this->errors[] = 'Error message';
 			return -1;
 		}
+
+		if (in_array('ordercard', $contexts) && $action === 'addline') {
+			/**
+			 * @var CommandeLigne $object
+			 */
+			$qty = GETPOST('qty');
+			$resultat = 0;
+
+			if (!empty($qty)) {
+				$qty = str_replace(' ', '', $qty);
+
+				if (!preg_match('/^[0-9+\-*\/().]+$/', $qty)) {
+					setEventMessage('Expression invalide, seuls les nombres et opérateurs mathématiques sont autorisés', 'errors');
+				} else {
+					if (preg_match('/[+\-*\/]/', $qty)) {
+						try {
+							$qty = strval($qty);
+							eval("\$resultat = $qty;");
+							$object->qty = $resultat;
+							$object->update($user, true);
+		
+							$sql = 'INSERT INTO '.MAIN_DB_PREFIX.'qtycheck (datec, expression, fk_product, fk_object, type_object, import_key, tms)';
+							$sql .= ' VALUES(\'' . date('Y-m-d') . '\',' . $qty . ',' . $object->id. ',' . GETPOST('id') . ','.$object->element.' , NULL);';
+		
+							if ($this->db->query($sql)) {
+								setEventMessage('Expression réussie', 'mesgs');
+							} else {
+								setEventMessage('Une erreur est survenue lors de la sauvegarde de l\'expression', 'errors');
+							}
+						} catch (Throwable $e) {
+							setEventMessage('Une erreur dans l\'évaluation de l\'expression est survenue', 'errors');
+						}
+					}
+				}
+			}
+		}
 	}
 
+	public function formAddObjectLine($parameters, &$object, &$action, $hookmanager)
+	{
+		$sql = "SELECT rowid, expression FROM ".MAIN_DB_PREFIX."qtycheck";
+		$result = $this->db->query($sql);
+		
+		// Convertir les résultats en JSON
+		if (!empty($result)) {
+			$jsonData = json_encode($result);
+			?>
+			<script>
+				const qtydiv = document.querySelectorAll('.linecolqty');
+				const qtyData = <?php echo $jsonData; ?>;
+
+				qtydiv.forEach((div, index) => {
+					if (qtyData[index]) {
+						div.textContent = qtyData[index].expression;
+					}
+				})
+			</script>
+			<?php
+		}
+	}
 
 	/**
 	 * Overloading the doMassActions function : replacing the parent's function with the one below
