@@ -56,4 +56,4 @@ MyWidgetDescription = My widget description
 #
 # Setup Module
 #
-AFFICHAGE_QUANTITES_LISTE = Show the quantity historique on object line
+AFFICHAGE_QUANTITES_LISTE = Affichage quantités liste
