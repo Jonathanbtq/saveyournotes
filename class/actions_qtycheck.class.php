@@ -155,9 +155,17 @@ class ActionsQtycheck extends CommonHookActions
 					
 					qtydiv.forEach((div, index) => {
 						const prtDiv = div.parentNode;
-						// prtDiv.style.position = 'relative';
 						var dataId = prtDiv.getAttribute('data-id');
 						div.style.position = 'relative';
+
+						const containerDiv = document.createElement('div');
+						containerDiv.style.position = 'relative';
+						containerDiv.style.display = 'flex';
+						containerDiv.style.flexDirection = 'column';
+						containerDiv.style.justifyContent = 'right';
+						prtDiv.replaceChild(containerDiv, div);
+
+						containerDiv.appendChild(div);
 
 						qtyData.forEach((data) => {
 							if (data['fk_ligne'] === dataId) {
@@ -172,13 +180,13 @@ class ActionsQtycheck extends CommonHookActions
 								hoverDiv.style.border = '1px solid #ccc';
 								hoverDiv.style.padding = '5px';
 								hoverDiv.style.zIndex = '1000';
-
-								div.parentNode.insertBefore(hoverDiv, div.nextSibling);
+								hoverDiv.style.whiteSpace = 'nowrap';
+								
+								// div.parentNode.insertBefore(hoverDiv, div.nextSibling);
+								containerDiv.appendChild(hoverDiv);
 
 								div.addEventListener('mouseover', () => {
 									hoverDiv.style.display = 'flex';
-									hoverDiv.style.top = (div.offsetTop + div.offsetHeight) + 'px';
-									hoverDiv.style.left = div.offsetLeft + 'px';
 								});
 
 								div.addEventListener('mouseout', () => {
@@ -195,7 +203,7 @@ class ActionsQtycheck extends CommonHookActions
 						background-color: #f0f0f0;
 						border: 1px solid #ccc;
 						padding: 5px;
-						z-index: 1000;
+						
 					}
 				</style>
 				<?php
