@@ -323,6 +323,7 @@ class InterfaceQtycheckTriggers extends DolibarrTriggers
 
 	public function qtycheck($object, $user)
 	{
+		$action = GETPOST('action');
 		$qty = GETPOST('qtynew');
 		$resultat = 0;
 
@@ -340,15 +341,25 @@ class InterfaceQtycheckTriggers extends DolibarrTriggers
 						$object->update($user, true);
 	
 						$objectid = GETPOST('id');
-						$lineid = GETPOST('idprod');
+						$lineid = GETPOST('idprod') ? : GETPOST('productid');
 
+						if ($action === 'updateline') {
+							$sqlDel = 'DELETE * FROM '.MAIN_DB_PREFIX.'qtycheck';
+							$sqlDel .= ' WHERE fk_product = '.$lineid.' AND fk_line = '.$object->id;
+							var_dump($sqlDel);
+							
+							if (!$this->db->query($sqlDel)) {
+								setEventMessage('Erreur dans la suppression de l\'ancienne expression', 'errors');
+								// exit;
+							}
+						}
 						/**
 						 * $lineid -> Id product
 						 * $objectid -> Id commande/facture
 						 * $object->id -> Id ligne
 						 */
 						$sql = 'INSERT INTO '.MAIN_DB_PREFIX.'qtycheck (datec, expression, fk_product, fk_object, fk_ligne, type_object, import_key, tms)';
-						$sql .= ' VALUES(\'' . date('d-m-Y') . '\', \'' . GETPOST('qtynew') . '\', ' . $lineid. ',' .$objectid . ', ' . $object->id . ' ,\''.$object->element.'\' , null,'. date('d-m-Y').');';
+						$sql .= ' VALUES(\'' . date('d-m-Y') . '\', \'' . GETPOST('qtynew') . '\', ' . $lineid. ',' .$objectid . ', ' . $object->id . ' ,\''.$object->element.'\' , null,\''. date('d-m-Y'). '\');';
 
 						if ($this->db->query($sql)) {
 							setEventMessage('Expression réussie', 'mesgs');
@@ -372,7 +383,7 @@ class InterfaceQtycheckTriggers extends DolibarrTriggers
 		return 0;
 	}
 
-	public function lineorderUpdate(string $action, $object, User $user)
+	public function lineorderModify(string $action, $object, User $user)
 	{
 		$this->qtycheck($object, $user);
 		
@@ -386,7 +397,7 @@ class InterfaceQtycheckTriggers extends DolibarrTriggers
 		return 0;
 	}
 
-	public function lineorderSupplierUpdate(string $action, $object, User $user)
+	public function lineorderSupplierModify(string $action, $object, User $user)
 	{
 		$this->qtycheck($object, $user);
 		
@@ -400,7 +411,7 @@ class InterfaceQtycheckTriggers extends DolibarrTriggers
 		return 0;
 	}
 
-	public function linepropalUpdate(string $action, $object, User $user)
+	public function linepropalModify(string $action, $object, User $user)
 	{
 		$this->qtycheck($object, $user);
 		
@@ -414,7 +425,7 @@ class InterfaceQtycheckTriggers extends DolibarrTriggers
 		return 0;
 	}
 
-	public function linesupplierProposalUpdate(string $action, $object, User $user)
+	public function linesupplierProposalModify(string $action, $object, User $user)
 	{
 		$this->qtycheck($object, $user);
 		
@@ -428,7 +439,7 @@ class InterfaceQtycheckTriggers extends DolibarrTriggers
 		return 0;
 	}
 
-	public function linebillUpdate(string $action, $object, User $user)
+	public function linebillModify(string $action, $object, User $user)
 	{
 		$this->qtycheck($object, $user);
 		
@@ -442,7 +453,7 @@ class InterfaceQtycheckTriggers extends DolibarrTriggers
 		return 0;
 	}
 
-	public function linebillSupplierUpdate(string $action, $object, User $user)
+	public function linebillSupplierModify(string $action, $object, User $user)
 	{
 		$this->qtycheck($object, $user);
 		

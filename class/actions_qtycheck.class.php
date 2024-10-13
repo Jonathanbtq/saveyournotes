@@ -114,7 +114,7 @@ class ActionsQtycheck extends CommonHookActions
 		$contexts = explode(':', $parameters['context'] ?? '');
 
 		// Envoyer la quantités avant la sauvegarde en bdd (calcul total HT)
-		if (array_intersect(['ordercard', 'propalcard', 'invoicecard'], $contexts) && $action === 'addline') {
+		if (array_intersect(['ordercard', 'propalcard', 'invoicecard'], $contexts) && $action === 'addline' || $action === 'updateline') {
 			$qty = GETPOST('qty');
 			$_POST['qtynew'] = $qty;
 			$resultat = 0;
