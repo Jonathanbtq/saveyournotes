@@ -22,10 +22,10 @@ header("Content-Type: text/css");
     text-decoration: none;
     display: inline-block;
     font-size: 16px;
-    cursor: pointer;  
+    cursor: pointer;
 
     border-radius: 12px;
-    position: relative;   
+    position: relative;
 }
 #toggleButton::after {
   content: "\25BC"; /* Flèche vers le bas */
@@ -84,12 +84,24 @@ header("Content-Type: text/css");
     width: 50%;
     text-align: start;
 }
+
+.table_fast_value td.fast_summary {
+	color: #999;
+	text-align: center;
+	width: 100%;
+}
+
 .table_fast_value a.reposition {
     display: inline-block;
     <!-- background-color: #3498db; -->
     color: white;
     border-radius: 5px;
     text-decoration: none;
+}
+
+.table_fast_value a.reposition.reload {
+	padding-top: 7px;
+	color: var(--colortextlink);
 }
 .table_fast_value a.reposition:hover {
     background-color: #d6d6d6;
