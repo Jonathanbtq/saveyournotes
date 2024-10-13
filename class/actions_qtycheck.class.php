@@ -136,33 +136,71 @@ class ActionsQtycheck extends CommonHookActions
 
 	public function formAddObjectLine($parameters, &$object, &$action, $hookmanager)
 	{
-		$sql = "SELECT expression, fk_ligne FROM ".MAIN_DB_PREFIX."qtycheck WHERE fk_object =".$object->id;
-		$result = $this->db->query($sql);
-		
-		// Convertir les résultats en JSON
-		if (!empty($result)) {
-			while($row = $this->db->fetch_object($result)) {
-				$qtycheck[] = $row;
-			}
-			$jsonData = json_encode($qtycheck);
-			?>
-			<script>
-				const qtydiv = document.querySelectorAll('.linecolqty');
-				const qtyData = <?php echo $jsonData; ?>;
-				
-				qtydiv.forEach((div, index) => {
-					const prtDiv = div.parentNode;
-					var dataId = prtDiv.getAttribute('data-id');
+		global $conf;
 
-					qtyData.forEach((data) => {
-						if (data['fk_ligne'] === dataId) {
-							div.textContent = data['expression'];
-							txt = data['expression'];
-						}
+		if ($conf->global->AFFICHAGE_QUANTITES_LISTE) {
+			$sql = "SELECT expression, fk_ligne FROM ".MAIN_DB_PREFIX."qtycheck WHERE fk_object =".$object->id;
+			$result = $this->db->query($sql);
+			
+			// Convertir les résultats en JSON
+			if (!empty($result)) {
+				while($row = $this->db->fetch_object($result)) {
+					$qtycheck[] = $row;
+				}
+				$jsonData = json_encode($qtycheck);
+				?>
+				<script>
+					const qtydiv = document.querySelectorAll('.linecolqty');
+					const qtyData = <?php echo $jsonData; ?>;
+					
+					qtydiv.forEach((div, index) => {
+						const prtDiv = div.parentNode;
+						prtDiv.style.position = 'relative';
+						var dataId = prtDiv.getAttribute('data-id');
+
+						qtyData.forEach((data) => {
+							if (data['fk_ligne'] === dataId) {
+								// Créer une nouvelle div pour apparaître en dessous au survol
+								const hoverDiv = document.createElement('div');
+								hoverDiv.textContent = data['expression']; // Mettre l'expression ou un autre texte
+								hoverDiv.classList.add('hover-info'); // Ajouter une classe pour le style
+								hoverDiv.style.display = 'none'; // Cacher la div au début
+								hoverDiv.style.position = 'absolute'; // Pour la positionner dynamiquement sous l'élément
+								hoverDiv.style.backgroundColor = '#f0f0f0'; // Background color
+								hoverDiv.style.border = '1px solid #ccc'; // Border
+								hoverDiv.style.padding = '5px'; // Padding
+								hoverDiv.style.zIndex = '1000'; // Position au-dessus des autres éléments
+
+								// Insérer la nouvelle div juste après la div actuelle
+								div.parentNode.insertBefore(hoverDiv, div.nextSibling);
+
+								// Ajouter un événement pour afficher la nouvelle div au survol
+								div.addEventListener('mouseover', () => {
+									hoverDiv.style.display = 'flex'; // Afficher la div au survol
+									hoverDiv.style.top = (div.offsetTop + div.offsetHeight) + 'px'; // Positionner juste en dessous
+									hoverDiv.style.left = div.offsetLeft + 'px'; // Aligner horizontalement
+								});
+
+								// Cacher la nouvelle div quand la souris quitte l'élément
+								div.addEventListener('mouseout', () => {
+									hoverDiv.style.display = 'none'; // Cacher la div quand la souris sort
+								});
+							}
+						})
 					})
-				})
-			</script>
-			<?php
+				</script>
+				<style>
+					.hover-info {
+						display: none;
+						position: absolute;
+						background-color: #f0f0f0;
+						border: 1px solid #ccc;
+						padding: 5px;
+						z-index: 1000;
+					}
+				</style>
+				<?php
+			}
 		}
 	}
 

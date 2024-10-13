@@ -52,3 +52,8 @@ MyPageName = My page name
 #
 MyWidget = My widget
 MyWidgetDescription = My widget description
+
+#
+# Setup Module
+#
+AFFICHAGE_QUANTITES_LISTE = Affichage quantités liste
