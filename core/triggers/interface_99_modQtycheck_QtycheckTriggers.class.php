@@ -344,13 +344,11 @@ class InterfaceQtycheckTriggers extends DolibarrTriggers
 						$lineid = GETPOST('idprod') ? : GETPOST('productid');
 
 						if ($action === 'updateline') {
-							$sqlDel = 'DELETE * FROM '.MAIN_DB_PREFIX.'qtycheck';
-							$sqlDel .= ' WHERE fk_product = '.$lineid.' AND fk_line = '.$object->id;
-							var_dump($sqlDel);
+							$sqlDel = 'DELETE FROM '.MAIN_DB_PREFIX.'qtycheck';
+							$sqlDel .= ' WHERE fk_product = '.$lineid.' AND fk_ligne = '.$object->id.' AND type_object ="'.$object->element.'"';
 							
 							if (!$this->db->query($sqlDel)) {
-								setEventMessage('Erreur dans la suppression de l\'ancienne expression', 'errors');
-								// exit;
+								setEventMessage('Erreur dans la suppression de l\'ancienne expression'.$this->db->error, 'errors');
 							}
 						}
 						/**

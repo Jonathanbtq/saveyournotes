@@ -139,7 +139,7 @@ class ActionsQtycheck extends CommonHookActions
 		global $conf;
 
 		if ($conf->global->AFFICHAGE_QUANTITES_LISTE) {
-			$sql = "SELECT expression, fk_ligne FROM ".MAIN_DB_PREFIX."qtycheck WHERE fk_object =".$object->id;
+			$sql = "SELECT expression, fk_ligne FROM ".MAIN_DB_PREFIX."qtycheck WHERE fk_object =".$object->id." AND type_object =".$object->element;
 			$result = $this->db->query($sql);
 			
 			// Convertir les résultats en JSON
