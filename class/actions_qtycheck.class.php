@@ -150,8 +150,6 @@ class ActionsQtycheck extends CommonHookActions
 					<script>
 						const qtydiv = document.querySelectorAll('.linecolqty');
 						const qtyData = <?php echo $jsonData; ?>;
-
-						console.log(qtydiv);
 						
 						qtydiv.forEach((div, index) => {
 							const prtDiv = div.parentNode;
