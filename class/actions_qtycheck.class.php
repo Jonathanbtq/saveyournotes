@@ -155,35 +155,34 @@ class ActionsQtycheck extends CommonHookActions
 					
 					qtydiv.forEach((div, index) => {
 						const prtDiv = div.parentNode;
-						prtDiv.style.position = 'relative';
+						// prtDiv.style.position = 'relative';
 						var dataId = prtDiv.getAttribute('data-id');
+						div.style.position = 'relative';
 
 						qtyData.forEach((data) => {
 							if (data['fk_ligne'] === dataId) {
 								// Créer une nouvelle div pour apparaître en dessous au survol
 								const hoverDiv = document.createElement('div');
-								hoverDiv.textContent = data['expression']; // Mettre l'expression ou un autre texte
-								hoverDiv.classList.add('hover-info'); // Ajouter une classe pour le style
-								hoverDiv.style.display = 'none'; // Cacher la div au début
-								hoverDiv.style.position = 'absolute'; // Pour la positionner dynamiquement sous l'élément
-								hoverDiv.style.backgroundColor = '#f0f0f0'; // Background color
-								hoverDiv.style.border = '1px solid #ccc'; // Border
-								hoverDiv.style.padding = '5px'; // Padding
-								hoverDiv.style.zIndex = '1000'; // Position au-dessus des autres éléments
+								hoverDiv.textContent = data['expression'];
+								hoverDiv.classList.add('hover-info');
+								hoverDiv.style.display = 'none';
+								hoverDiv.style.position = 'absolute';
+								hoverDiv.style.top = '0';
+								hoverDiv.style.backgroundColor = '#f0f0f0';
+								hoverDiv.style.border = '1px solid #ccc';
+								hoverDiv.style.padding = '5px';
+								hoverDiv.style.zIndex = '1000';
 
-								// Insérer la nouvelle div juste après la div actuelle
 								div.parentNode.insertBefore(hoverDiv, div.nextSibling);
 
-								// Ajouter un événement pour afficher la nouvelle div au survol
 								div.addEventListener('mouseover', () => {
-									hoverDiv.style.display = 'flex'; // Afficher la div au survol
-									hoverDiv.style.top = (div.offsetTop + div.offsetHeight) + 'px'; // Positionner juste en dessous
-									hoverDiv.style.left = div.offsetLeft + 'px'; // Aligner horizontalement
+									hoverDiv.style.display = 'flex';
+									hoverDiv.style.top = (div.offsetTop + div.offsetHeight) + 'px';
+									hoverDiv.style.left = div.offsetLeft + 'px';
 								});
 
-								// Cacher la nouvelle div quand la souris quitte l'élément
 								div.addEventListener('mouseout', () => {
-									hoverDiv.style.display = 'none'; // Cacher la div quand la souris sort
+									hoverDiv.style.display = 'none';
 								});
 							}
 						})
