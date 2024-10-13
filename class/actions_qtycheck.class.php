@@ -105,12 +105,6 @@ class ActionsQtycheck extends CommonHookActions
 
 		$error = 0; // Error counter
 
-		/* print_r($parameters); print_r($object); echo "action: " . $action; */
-		if (in_array($parameters['currentcontext'], array('somecontext1', 'somecontext2'))) {	    // do something only for the context 'somecontext1' or 'somecontext2'
-			// Do what you want here...
-			// You can for example call global vars like $fieldstosearchall to overwrite them, or update database depending on $action and $_POST values.
-		}
-
 		$contexts = explode(':', $parameters['context'] ?? '');
 
 		// Envoyer la quantités avant la sauvegarde en bdd (calcul total HT)
@@ -138,75 +132,82 @@ class ActionsQtycheck extends CommonHookActions
 	{
 		global $conf;
 
-		if ($conf->global->AFFICHAGE_QUANTITES_LISTE) {
-			$sql = "SELECT expression, fk_ligne FROM ".MAIN_DB_PREFIX."qtycheck WHERE fk_object =".$object->id." AND type_object =".$object->element;
-			$result = $this->db->query($sql);
-			
-			// Convertir les résultats en JSON
-			if (!empty($result)) {
-				while($row = $this->db->fetch_object($result)) {
-					$qtycheck[] = $row;
-				}
-				$jsonData = json_encode($qtycheck);
-				?>
-				<script>
-					const qtydiv = document.querySelectorAll('.linecolqty');
-					const qtyData = <?php echo $jsonData; ?>;
-					
-					qtydiv.forEach((div, index) => {
-						const prtDiv = div.parentNode;
-						var dataId = prtDiv.getAttribute('data-id');
-						div.style.position = 'relative';
+		$contexts = explode(':', $parameters['context'] ?? '');
 
-						const containerDiv = document.createElement('div');
-						containerDiv.style.position = 'relative';
-						containerDiv.style.display = 'flex';
-						containerDiv.style.flexDirection = 'column';
-						containerDiv.style.justifyContent = 'right';
-						prtDiv.replaceChild(containerDiv, div);
-
-						containerDiv.appendChild(div);
-
-						qtyData.forEach((data) => {
-							if (data['fk_ligne'] === dataId) {
-								// Créer une nouvelle div pour apparaître en dessous au survol
-								const hoverDiv = document.createElement('div');
-								hoverDiv.textContent = data['expression'];
-								hoverDiv.classList.add('hover-info');
-								hoverDiv.style.display = 'none';
-								hoverDiv.style.position = 'absolute';
-								hoverDiv.style.top = '0';
-								hoverDiv.style.backgroundColor = '#f0f0f0';
-								hoverDiv.style.border = '1px solid #ccc';
-								hoverDiv.style.padding = '5px';
-								hoverDiv.style.zIndex = '1000';
-								hoverDiv.style.whiteSpace = 'nowrap';
-								
-								// div.parentNode.insertBefore(hoverDiv, div.nextSibling);
-								containerDiv.appendChild(hoverDiv);
-
-								div.addEventListener('mouseover', () => {
-									hoverDiv.style.display = 'flex';
-								});
-
-								div.addEventListener('mouseout', () => {
-									hoverDiv.style.display = 'none';
-								});
-							}
-						})
-					})
-				</script>
-				<style>
-					.hover-info {
-						display: none;
-						position: absolute;
-						background-color: #f0f0f0;
-						border: 1px solid #ccc;
-						padding: 5px;
-						
+		if (array_intersect(['ordercard', 'propalcard', 'invoicecard'], $contexts)) {
+			if ($conf->global->AFFICHAGE_QUANTITES_LISTE) {
+				$typeObj = $object->element."det";
+				$sql = "SELECT expression, fk_ligne FROM ".MAIN_DB_PREFIX."qtycheck WHERE fk_object =".$object->id." AND type_object ='".$typeObj."'";
+				$result = $this->db->query($sql);
+				
+				// Convertir les résultats en JSON
+				if (!empty($result)) {
+					while($row = $this->db->fetch_object($result)) {
+						$qtycheck[] = $row;
 					}
-				</style>
-				<?php
+					$jsonData = json_encode($qtycheck);
+					?>
+					<script>
+						const qtydiv = document.querySelectorAll('.linecolqty');
+						const qtyData = <?php echo $jsonData; ?>;
+
+						console.log(qtydiv);
+						
+						qtydiv.forEach((div, index) => {
+							const prtDiv = div.parentNode;
+							var dataId = prtDiv.getAttribute('data-id');
+							div.style.position = 'relative';
+
+							const containerDiv = document.createElement('div');
+							containerDiv.style.position = 'relative';
+							containerDiv.style.display = 'flex';
+							containerDiv.style.flexDirection = 'column';
+							containerDiv.style.justifyContent = 'right';
+							prtDiv.replaceChild(containerDiv, div);
+
+							containerDiv.appendChild(div);
+
+							qtyData.forEach((data) => {
+								if (data['fk_ligne'] === dataId) {
+									// Créer une nouvelle div pour apparaître en dessous au survol
+									const hoverDiv = document.createElement('div');
+									hoverDiv.textContent = data['expression'];
+									hoverDiv.classList.add('hover-info');
+									hoverDiv.style.display = 'none';
+									hoverDiv.style.position = 'absolute';
+									hoverDiv.style.top = '0';
+									hoverDiv.style.backgroundColor = '#f0f0f0';
+									hoverDiv.style.border = '1px solid #ccc';
+									hoverDiv.style.padding = '5px';
+									hoverDiv.style.zIndex = '1000';
+									hoverDiv.style.whiteSpace = 'nowrap';
+									
+									// div.parentNode.insertBefore(hoverDiv, div.nextSibling);
+									containerDiv.appendChild(hoverDiv);
+
+									div.addEventListener('mouseover', () => {
+										hoverDiv.style.display = 'flex';
+									});
+
+									div.addEventListener('mouseout', () => {
+										hoverDiv.style.display = 'none';
+									});
+								}
+							})
+						})
+					</script>
+					<style>
+						.hover-info {
+							display: none;
+							position: absolute;
+							background-color: #f0f0f0;
+							border: 1px solid #ccc;
+							padding: 5px;
+							
+						}
+					</style>
+					<?php
+				}
 			}
 		}
 	}
