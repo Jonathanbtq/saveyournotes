@@ -114,14 +114,15 @@ class ActionsSaveyournotes extends CommonHookActions
 			if ($action == 'setnote_suppl') {
 				$note = GETPOST('note_suppl');
 
-				$sql = 'INSERT INTO '.MAIN_DB_PREFIX.'saveyournotes (datec, note, fk_object, type_object, tms)';
-				$sql .= ' VALUES ("'.date('Y-m-d').'", "'.$note.'", '.$object->id.', "'.$object->element.'", "'.date('Y-m-d').'")';
-
-				if (!$db->query($sql)) {
-					setEventMessage('Une erreur est survenue lors de la sauvegarde de la note'.$db->error, 'errors');
+				if (!empty($note)) {
+					$sql = 'INSERT INTO '.MAIN_DB_PREFIX.'saveyournotes (datec, note, fk_object, type_object, tms)';
+					$sql .= ' VALUES ("'.date('Y-m-d').'", "'.$note.'", '.$object->id.', "'.$object->element.'", "'.date('Y-m-d').'")';
+	
+					if (!$db->query($sql)) {
+						setEventMessage('Une erreur est survenue lors de la sauvegarde de la note'.$db->error, 'errors');
+					}
 				}
 			}
-			var_dump($action);
 		}
 
 		if (!$error) {

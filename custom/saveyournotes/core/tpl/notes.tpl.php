@@ -137,7 +137,7 @@ if (empty($user->socid)) {
 }
 print '</div>'."\n";
 
-print '<tagtable class="border table-border tableforfield centpercent">';
+print '<tagtable class="border table-border tableforfield centpercent" style="height: 5vw">';
 print '<div class="tagtr table-border-row">';
 print '<div class="tagtd tagtdnote tdtop sensiblehtmlcontent table-key-border-col titlefield">';
 print '<table class="nobordernopadding centpercent">';
@@ -153,15 +153,14 @@ print '</table>';
 print '</div>';
 
 print '<div class="tagtd wordbreak table-val-border-col sensiblehtmlcontent tageditsuppl" style="opacity:0;">';
-	print '<form method="post" action="/doliv19/v19/commande/note.php"><input type="hidden" name="action" value="setnote_suppl">';
-		print '<input type="hidden" name="token" value="3fd83ff03c4dd9f963263fbc475a924f"><input type="hidden" name="id" value="1">';
-			print '<textarea id="note_suppl" name="note_suppl" wrap="soft" rows="12" class="quatrevingtpercent" style="width: 95%" "="" autofocus=""></textarea>';
-			print '<input type="submit" class="smallpaddingimp button " name="modify" value="Modifier">';
-		print '<input type="submit" class="smallpaddingimp button button-cancel " name="cancel" value="Annuler">';
-	print '</form>';
+print '<form method="post" action="/doliv19/v19/commande/note.php"><input type="hidden" name="action" value="setnote_suppl">';
+print '<input type="hidden" name="token" value="3fd83ff03c4dd9f963263fbc475a924f"><input type="hidden" name="id" value="1">';
+print '<textarea id="note_suppl" name="note_suppl" wrap="soft" rows="12" class="quatrevingtpercent" style="width: 95%" "="" autofocus=""></textarea>';
+print '<input type="submit" class="smallpaddingimp button " name="modify" value="Ajouter">';
+print '<input type="submit" class="smallpaddingimp button button-cancel " name="cancel" value="Annuler">';
+print '</form>';
 print '</div>';
 print '</div>';
-
 print '</table>';
 
 global $db;
@@ -172,9 +171,19 @@ $result = $db->query($sqlNotes);
 
 print '<div>';
 print '<h2>Notes Supplémentaires</h2>';
-foreach($result as $note) {
-	print '<p>'.$note->note.'</p>';
+
+print '<table style="width:100%;">';
+print '<tr style="width: 10vw;border-bottom: 1px solid #ccc">';
+print '<td style="width:30%;">Date</td>';
+print '<td style="width:70%;">Note</td>';
+print '</tr>';
+while ($note = $db->fetch_object($result)) {
+	print '<tr style="width: 10vw;">';
+	print '<td style="width:30%;">'.$note->note.'</td>';
+	print '<td style="width:70%;">'.$note->datec.'</td>';
+	print '</tr>';
 }
+print '<table>';
 print '</div>';
 ?>
 <script>
