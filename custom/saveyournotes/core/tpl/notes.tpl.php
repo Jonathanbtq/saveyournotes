@@ -164,10 +164,17 @@ print '</div>';
 
 print '</table>';
 
+global $db;
+
+$sqlNotes = 'SELECT * FROM '.MAIN_DB_PREFIX.'saveyournotes';
+$sqlNotes .= ' WHERE fk_object ='.$object->id.' AND type_object ="'.$object->element.'"';
+$result = $db->query($sqlNotes);
 
 print '<div>';
 print '<h2>Notes Supplémentaires</h2>';
-print '<p>Note</p>';
+foreach($result as $note) {
+	print '<p>'.$note->note.'</p>';
+}
 print '</div>';
 ?>
 <script>

@@ -108,7 +108,7 @@ class ActionsSaveyournotes extends CommonHookActions
 
 		$contexts = explode(':', $parameters['context'] ?? '');
 
-		if (in_array('ordernote', $contexts)) {    // do something only for the context 'somecontext1' or 'somecontext2'
+		if (in_array('ordernote', $contexts)) {
 			// var_dump($conf->modules_parts['tpl']);
 			$action = GETPOST('action');
 			if ($action == 'setnote_suppl') {
