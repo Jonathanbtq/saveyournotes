@@ -181,13 +181,13 @@ print '<h2 style="color: var(--colortexttitlenotab);">Notes Supplémentaires</h2
 
 print '<table style="width:70%;">';
 print '<tr style="width: 10vw;border-bottom: 1px solid #ccc;background-color: #d5e1e9;border-radius:5px;padding:5px;">';
-print '<td style="width:50%;font-weight: bold;">Date</td>';
-print '<td style="width:50%;font-weight: bold;">Note</td>';
-print '<td style="width:50%;font-weight: bold;">Action</td>';
+print '<td style="width:30%;font-weight: bold;color: var(--refidnocolor);">Date</td>';
+print '<td style="width:50%;font-weight: bold;color: var(--refidnocolor);">Note</td>';
+print '<td style="width:50%;font-weight: bold;color: var(--refidnocolor);">Action</td>';
 print '</tr>';
 while ($note = $db->fetch_object($result)) {
 	print '<tr style="width: 10vw;">';
-	print '<td style="width:50%;">'.$note->datec.'</td>';
+	print '<td style="width:30%;">'.$note->datec.'</td>';
 	print '<td style="width:50%;">'.$note->note.'</td>';
 	print '<td style="width:50%;"><a href="'.$_SERVER['PHP_SELF'].'?id='.GETPOST('id').'&action=deletenotesuppl&noteid='.$note->rowid.'&token='.newToken().'" style="font-weight:bold;">x</a></td>';
 	print '</tr>';
