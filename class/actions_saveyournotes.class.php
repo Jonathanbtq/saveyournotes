@@ -102,14 +102,37 @@ class ActionsSaveyournotes extends CommonHookActions
 	 */
 	public function doActions($parameters, &$object, &$action, $hookmanager)
 	{
-		global $conf, $user, $langs;
+		global $conf, $user, $langs, $db;
 
 		$error = 0; // Error counter
 
-		/* print_r($parameters); print_r($object); echo "action: " . $action; */
-		if (in_array($parameters['currentcontext'], array('somecontext1', 'somecontext2'))) {	    // do something only for the context 'somecontext1' or 'somecontext2'
-			// Do what you want here...
-			// You can for example load and use call global vars like $fieldstosearchall to overwrite them, or update database depending on $action and GETPOST values.
+		$contexts = explode(':', $parameters['context'] ?? '');
+
+		if (in_array('ordernote', $contexts)) {
+			// var_dump($conf->modules_parts['tpl']);
+			$action = GETPOST('action');
+			if ($action == 'setnote_suppl') {
+				$note = GETPOST('note_suppl');
+				
+				if (!empty($note)) {
+					$sql = 'INSERT INTO '.MAIN_DB_PREFIX.'saveyournotes (datec, note, fk_object, type_object, tms)';
+					$sql .= ' VALUES ("'.date('Y-m-d').'", "'.$note.'", '.$object->id.', "'.$object->element.'", "'.date('Y-m-d').'")';
+					
+					if (!$db->query($sql)) {
+						setEventMessage('Une erreur est survenue lors de la sauvegarde de la note'.$db->error, 'errors');
+					}
+				}
+			} elseif ($action == 'deletenotesuppl') {
+				$noteid = GETPOST('noteid');
+				
+				if (!empty($noteid)) {
+					$sqlDel = 'DELETE FROM '.MAIN_DB_PREFIX.'saveyournotes WHERE rowid= '.$noteid;
+	
+					if (!$db->query($sqlDel)) {
+						setEventMessage('Une erreur est survenue lors de la suppression de la note'.$db->error, 'errors');
+					}
+				}
+			}
 		}
 
 		if (!$error) {
