@@ -103,7 +103,7 @@ class modSaveyournotes extends DolibarrModules
 			// Set this to 1 if module has its own barcode directory (core/modules/barcode)
 			'barcode' => 0,
 			// Set this to 1 if module has its own models directory (core/modules/xxx)
-			'models' => 0,
+			'models' => 1,
 			// Set this to 1 if module has its own printing directory (core/modules/printing)
 			'printing' => 0,
 			// Set this to 1 if module has its own theme directory (theme)
@@ -120,6 +120,7 @@ class modSaveyournotes extends DolibarrModules
 			'hooks' => array(
 				  'data' => array(
 				      'main',
+					  'ordernote'
 				  ),
 				  'entity' => '0',
 			),
