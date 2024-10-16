@@ -137,31 +137,38 @@ if (empty($user->socid)) {
 }
 print '</div>'."\n";
 
-print '<tagtable class="border table-border tableforfield centpercent" style="height: 5vw">';
-print '<div class="tagtr table-border-row">';
-print '<div class="tagtd tagtdnote tdtop sensiblehtmlcontent table-key-border-col titlefield">';
-print '<table class="nobordernopadding centpercent">';
-print '<tbody>';
-print '<tr>';
-print '<td>Note (supplémentaire)<td>';
-print '<td class="right pencilsuppl">';
-print '<span class="fas fa-pencil-alt" style=" color: #444; float: right; cursor:pointer;" title="Éditer"></span>';
-print '</td>';
-print '</tr>';
-print '</tbody>';
-print '</table>';
-print '</div>';
+// print '<table class="border table-border tableforfield centpercent notesupplmenu" style="height: 5vw; width: 25%;">';
 
-print '<div class="tagtd wordbreak table-val-border-col sensiblehtmlcontent tageditsuppl" style="opacity:0;">';
-print '<form method="post" action="/doliv19/v19/commande/note.php"><input type="hidden" name="action" value="setnote_suppl">';
-print '<input type="hidden" name="token" value="3fd83ff03c4dd9f963263fbc475a924f"><input type="hidden" name="id" value="1">';
-print '<textarea id="note_suppl" name="note_suppl" wrap="soft" rows="12" class="quatrevingtpercent" style="width: 95%" "="" autofocus=""></textarea>';
-print '<input type="submit" class="smallpaddingimp button " name="modify" value="Ajouter">';
-print '<input type="submit" class="smallpaddingimp button button-cancel " name="cancel" value="Annuler">';
-print '</form>';
-print '</div>';
-print '</div>';
-print '</table>';
+    // Première div pour la note et l'icône d'édition
+    print '<div class="notesupplmenu" style="height: 5vw; width: 25%;>';
+        print '<div class="tagtd tagtdnote tdtop sensiblehtmlcontent table-key-border-col titlefield">';
+            print '<table class="nobordernopadding centpercent">';
+                print '<tbody>';
+                    print '<tr>';
+                        print '<td>Note (supplémentaire)</td>';
+                        print '<td class="right pencilsuppl">';
+                            print '<span class="fas fa-pencil-alt" style="color: #444; float: right; cursor: pointer;" title="Éditer"></span>';
+                        print '</td>';
+                    print '</tr>';
+                print '</tbody>';
+            print '</table>';
+        print '</div>';
+
+        // Deuxième div pour le formulaire d'édition de la note supplémentaire
+        print '<div class="tagtd wordbreak table-val-border-col sensiblehtmlcontent tageditsuppl" style="display:none;">';
+            print '<form method="post" action="/doliv19/v19/commande/note.php">';
+                print '<input type="hidden" name="action" value="setnote_suppl">';
+                print '<input type="hidden" name="token" value="'.newToken().'">';
+                print '<input type="hidden" name="id" value="'.GETPOST('id').'">';
+                print '<textarea id="note_suppl" name="note_suppl" wrap="soft" rows="12" class="quatrevingtpercent" style="width: 95%;" autofocus></textarea>';
+                print '<input type="submit" class="smallpaddingimp button" name="modify" value="Ajouter">';
+                print '<input type="submit" class="smallpaddingimp button button-cancel" name="cancel" value="Annuler">';
+            print '</form>';
+        print '</div>';
+        
+    print '</div>'; // Fin de la div tagtr
+
+// print '</table>';
 
 global $db;
 
@@ -170,17 +177,19 @@ $sqlNotes .= ' WHERE fk_object ='.$object->id.' AND type_object ="'.$object->ele
 $result = $db->query($sqlNotes);
 
 print '<div>';
-print '<h2>Notes Supplémentaires</h2>';
+print '<h2 style="color: var(--colortexttitlenotab);">Notes Supplémentaires</h2>';
 
-print '<table style="width:100%;">';
-print '<tr style="width: 10vw;border-bottom: 1px solid #ccc">';
-print '<td style="width:30%;">Date</td>';
-print '<td style="width:70%;">Note</td>';
+print '<table style="width:70%;">';
+print '<tr style="width: 10vw;border-bottom: 1px solid #ccc;background-color: #d5e1e9;border-radius:5px;padding:5px;">';
+print '<td style="width:50%;font-weight: bold;">Date</td>';
+print '<td style="width:50%;font-weight: bold;">Note</td>';
+print '<td style="width:50%;font-weight: bold;">Action</td>';
 print '</tr>';
 while ($note = $db->fetch_object($result)) {
 	print '<tr style="width: 10vw;">';
-	print '<td style="width:30%;">'.$note->note.'</td>';
-	print '<td style="width:70%;">'.$note->datec.'</td>';
+	print '<td style="width:50%;">'.$note->datec.'</td>';
+	print '<td style="width:50%;">'.$note->note.'</td>';
+	print '<td style="width:50%;"><a href="'.$_SERVER['PHP_SELF'].'?id='.GETPOST('id').'&action=deletenotesuppl&noteid='.$note->rowid.'&token='.newToken().'" style="font-weight:bold;">x</a></td>';
 	print '</tr>';
 }
 print '<table>';
@@ -189,12 +198,14 @@ print '</div>';
 <script>
 	let penciledit = document.querySelector('.pencilsuppl');
 	const writearea = document.querySelector('.tageditsuppl');
+	const notesupplmenu = document.querySelector('.notesupplmenu');
 
 	penciledit.addEventListener("click", (e) => {
 		e.preventDefault();
-		writearea.style.opacity = "1";
+		writearea.style.display = "flex";
 		penciledit.style.opacity = "0";
 		penciledit.style.cursor = 'auto';
+		notesupplmenu.style.width = '100%';
 	})
 </script>
 <!-- END PHP TEMPLATE NOTES-->

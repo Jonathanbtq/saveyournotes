@@ -113,13 +113,23 @@ class ActionsSaveyournotes extends CommonHookActions
 			$action = GETPOST('action');
 			if ($action == 'setnote_suppl') {
 				$note = GETPOST('note_suppl');
-
+				
 				if (!empty($note)) {
 					$sql = 'INSERT INTO '.MAIN_DB_PREFIX.'saveyournotes (datec, note, fk_object, type_object, tms)';
 					$sql .= ' VALUES ("'.date('Y-m-d').'", "'.$note.'", '.$object->id.', "'.$object->element.'", "'.date('Y-m-d').'")';
-	
+					
 					if (!$db->query($sql)) {
 						setEventMessage('Une erreur est survenue lors de la sauvegarde de la note'.$db->error, 'errors');
+					}
+				}
+			} elseif ($action == 'deletenotesuppl') {
+				$noteid = GETPOST('noteid');
+				
+				if (!empty($noteid)) {
+					$sqlDel = 'DELETE FROM '.MAIN_DB_PREFIX.'saveyournotes WHERE rowid= '.$noteid;
+	
+					if (!$db->query($sqlDel)) {
+						setEventMessage('Une erreur est survenue lors de la suppression de la note'.$db->error, 'errors');
 					}
 				}
 			}
