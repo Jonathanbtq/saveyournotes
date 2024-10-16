@@ -20,7 +20,7 @@
 // Protection to avoid direct call of template
 if (empty($object) || !is_object($object)) {
 	print "Error, template page can't be called as URL";
-	exit(1);
+	exit;
 }
 
 // $permissionnote 	must be defined by caller. For example $permissionnote=$user->rights->module->create
@@ -34,11 +34,11 @@ if ($module == "product") {
 }
 $colwidth = (isset($colwidth) ? $colwidth : (empty($cssclass) ? '25' : ''));
 // Set $permission from the $permissionnote var defined on calling page
-$permission = (isset($permissionnote) ? $permissionnote : (isset($permission) ? $permission : ($user->hasRight($module, 'create') ? $user->rights->$module->create : ($user->hasRight($module, 'creer') ? $user->rights->$module->creer : 0))));
+$permission = (isset($permissionnote) ? $permissionnote : (isset($permission) ? $permission : (isset($user->rights->$module->create) ? $user->rights->$module->create : (isset($user->rights->$module->creer) ? $user->rights->$module->creer : 0))));
 $moreparam = (isset($moreparam) ? $moreparam : '');
 $value_public = $object->note_public;
 $value_private = $object->note_private;
-if (getDolGlobalString('MAIN_AUTO_TIMESTAMP_IN_PUBLIC_NOTES')) {
+if (!empty($conf->global->MAIN_AUTO_TIMESTAMP_IN_PUBLIC_NOTES)) {
 	$stringtoadd = dol_print_date(dol_now(), 'dayhour').' '.$user->getFullName($langs).' --';
 	if (GETPOST('action', 'aZ09') == 'edit'.$note_public) {
 		$value_public = dol_concatdesc($value_public, ($value_public ? "\n" : "")."-- ".$stringtoadd);
@@ -49,7 +49,7 @@ if (getDolGlobalString('MAIN_AUTO_TIMESTAMP_IN_PUBLIC_NOTES')) {
 		}
 	}
 }
-if (getDolGlobalString('MAIN_AUTO_TIMESTAMP_IN_PRIVATE_NOTES')) {
+if (!empty($conf->global->MAIN_AUTO_TIMESTAMP_IN_PRIVATE_NOTES)) {
 	$stringtoadd = dol_print_date(dol_now(), 'dayhour').' '.$user->getFullName($langs).' --';
 	if (GETPOST('action', 'aZ09') == 'edit'.$note_private) {
 		$value_private = dol_concatdesc($value_private, ($value_private ? "\n" : "")."-- ".$stringtoadd);
@@ -73,13 +73,13 @@ if ($module == 'propal') {
 } elseif ($module == 'project_task') {
 	$permission = $user->hasRight("projet", "creer");
 } elseif ($module == 'invoice_supplier') {
-	if (!getDolGlobalString('MAIN_USE_NEW_SUPPLIERMOD')) {
+	if (empty($conf->global->MAIN_USE_NEW_SUPPLIERMOD)) {
 		$permission = $user->hasRight("fournisseur", "facture", "creer");
 	} else {
 		$permission = $user->hasRight("supplier_invoice", "creer");
 	}
 } elseif ($module == 'order_supplier') {
-	if (!getDolGlobalString('MAIN_USE_NEW_SUPPLIERMOD')) {
+	if (empty($conf->global->MAIN_USE_NEW_SUPPLIERMOD)) {
 		$permission = $user->hasRight("fournisseur", "commande", "creer");
 	} else {
 		$permission = $user->hasRight("supplier_order", "creer");
@@ -99,20 +99,18 @@ if ($module == 'propal') {
 } elseif ($module == 'user') {
 	$permission = $user->hasRight("user", "self", "write");
 }
-//else dol_print_error(null,'Bad value '.$module.' for param module');
+//else dol_print_error('','Bad value '.$module.' for param module');
 
-if (isModEnabled('fckeditor') && getDolGlobalString('FCKEDITOR_ENABLE_NOTE_PUBLIC')) {
+if (isModEnabled('fckeditor') && !empty($conf->global->FCKEDITOR_ENABLE_NOTE_PUBLIC)) {
 	$typeofdatapub = 'ckeditor:dolibarr_notes:100%:200::1:12:95%:0'; // Rem: This var is for all notes, not only thirdparties note.
 } else {
 	$typeofdatapub = 'textarea:12:95%';
 }
-if (isModEnabled('fckeditor') && getDolGlobalString('FCKEDITOR_ENABLE_NOTE_PRIVATE')) {
+if (isModEnabled('fckeditor') && !empty($conf->global->FCKEDITOR_ENABLE_NOTE_PRIVATE)) {
 	$typeofdatapriv = 'ckeditor:dolibarr_notes:100%:200::1:12:95%:0'; // Rem: This var is for all notes, not only thirdparties note.
 } else {
 	$typeofdatapriv = 'textarea:12:95%';
 }
-
-print 'test';
 
 print '<!-- BEGIN PHP TEMPLATE NOTES -->'."\n";
 print '<div class="tagtable border table-border tableforfield centpercent">'."\n";
@@ -138,5 +136,76 @@ if (empty($user->socid)) {
 	print '</div>'."\n";
 }
 print '</div>'."\n";
+
+// print '<table class="border table-border tableforfield centpercent notesupplmenu" style="height: 5vw; width: 25%;">';
+
+    // Première div pour la note et l'icône d'édition
+    print '<div class="notesupplmenu" style="height: 5vw; width: 25%;>';
+        print '<div class="tagtd tagtdnote tdtop sensiblehtmlcontent table-key-border-col titlefield">';
+            print '<table class="nobordernopadding centpercent">';
+                print '<tbody>';
+                    print '<tr>';
+                        print '<td>Note (supplémentaire)</td>';
+                        print '<td class="right pencilsuppl">';
+                            print '<span class="fas fa-pencil-alt" style="color: #444; float: right; cursor: pointer;" title="Éditer"></span>';
+                        print '</td>';
+                    print '</tr>';
+                print '</tbody>';
+            print '</table>';
+        print '</div>';
+
+        // Deuxième div pour le formulaire d'édition de la note supplémentaire
+        print '<div class="tagtd wordbreak table-val-border-col sensiblehtmlcontent tageditsuppl" style="display:none;">';
+            print '<form method="post" action="/doliv19/v19/commande/note.php">';
+                print '<input type="hidden" name="action" value="setnote_suppl">';
+                print '<input type="hidden" name="token" value="'.newToken().'">';
+                print '<input type="hidden" name="id" value="'.GETPOST('id').'">';
+                print '<textarea id="note_suppl" name="note_suppl" wrap="soft" rows="12" class="quatrevingtpercent" style="width: 95%;" autofocus></textarea>';
+                print '<input type="submit" class="smallpaddingimp button" name="modify" value="Ajouter">';
+                print '<input type="submit" class="smallpaddingimp button button-cancel" name="cancel" value="Annuler">';
+            print '</form>';
+        print '</div>';
+        
+    print '</div>'; // Fin de la div tagtr
+
+// print '</table>';
+
+global $db;
+
+$sqlNotes = 'SELECT * FROM '.MAIN_DB_PREFIX.'saveyournotes';
+$sqlNotes .= ' WHERE fk_object ='.$object->id.' AND type_object ="'.$object->element.'"';
+$result = $db->query($sqlNotes);
+
+print '<div>';
+print '<h2 style="color: var(--colortexttitlenotab);">Notes Supplémentaires</h2>';
+
+print '<table style="width:70%;">';
+print '<tr style="width: 10vw;border-bottom: 1px solid #ccc;background-color: #d5e1e9;border-radius:5px;padding:5px;">';
+print '<td style="width:30%;font-weight: bold;color: var(--refidnocolor);">Date</td>';
+print '<td style="width:50%;font-weight: bold;color: var(--refidnocolor);">Note</td>';
+print '<td style="width:50%;font-weight: bold;color: var(--refidnocolor);">Action</td>';
+print '</tr>';
+while ($note = $db->fetch_object($result)) {
+	print '<tr style="width: 10vw;">';
+	print '<td style="width:30%;">'.$note->datec.'</td>';
+	print '<td style="width:50%;">'.$note->note.'</td>';
+	print '<td style="width:50%;"><a href="'.$_SERVER['PHP_SELF'].'?id='.GETPOST('id').'&action=deletenotesuppl&noteid='.$note->rowid.'&token='.newToken().'" style="font-weight:bold;">x</a></td>';
+	print '</tr>';
+}
+print '<table>';
+print '</div>';
 ?>
+<script>
+	let penciledit = document.querySelector('.pencilsuppl');
+	const writearea = document.querySelector('.tageditsuppl');
+	const notesupplmenu = document.querySelector('.notesupplmenu');
+
+	penciledit.addEventListener("click", (e) => {
+		e.preventDefault();
+		writearea.style.display = "flex";
+		penciledit.style.opacity = "0";
+		penciledit.style.cursor = 'auto';
+		notesupplmenu.style.width = '100%';
+	})
+</script>
 <!-- END PHP TEMPLATE NOTES-->
